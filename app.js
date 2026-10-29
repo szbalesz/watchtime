@@ -1,6 +1,27 @@
 let currentChannelId = null;
 let currentUserData = null;
 
+// Cím- és URL-kezelő segédfüggvény
+function updatePageTitleAndURL(channel = null, user = null) {
+    let title = "SE Watchtime & Pont Panel";
+    let path = '/';
+
+    if (channel) {
+        path += channel;
+        const channelName = document.getElementById('channel-name').textContent || channel;
+
+        if (user) {
+            path += `/${user}`;
+            title = `${user} • ${channelName} csatornán — SE Panel`;
+        } else {
+            title = `${channelName} — SE Statisztika`;
+        }
+    }
+
+    document.title = title;
+    window.history.pushState({}, '', path);
+}
+
 function toggleSection(sectionId, isOpen) {
     const section = document.getElementById(sectionId);
     if (!section) return;
@@ -60,17 +81,6 @@ function setLoading(btnTextId, spinnerId, loading) {
     }
 }
 
-function updateURL(channel, user = null) {
-    let path = '/';
-    if (channel) {
-        path += channel;
-        if (user) {
-            path += `/${user}`;
-        }
-    }
-    window.history.pushState({}, '', path);
-}
-
 /* 1. Lépés: Csatorna keresése */
 async function searchChannel(channelNameFromUrl = null) {
     const input = channelNameFromUrl || document.getElementById('channel-input').value.trim().toLowerCase();
@@ -99,7 +109,8 @@ async function searchChannel(channelNameFromUrl = null) {
         document.getElementById('channel-input').value = input;
         const userInput = document.getElementById('user-input');
 
-        updateURL(input);
+        // Titulus és URL frissítése csatornára
+        updatePageTitleAndURL(input);
 
         toggleSection('sec-channel', false);
         toggleSection('sec-viewer', true);
@@ -175,8 +186,9 @@ async function searchUser(userNameFromUrl = null) {
 
         updateWatchtimeDisplay();
 
+        // Titulus és URL frissítése csatorna + néző párosra
         const channelInput = document.getElementById('channel-input').value.trim().toLowerCase();
-        updateURL(channelInput, input);
+        updatePageTitleAndURL(channelInput, input);
 
         toggleSection('sec-stats', true);
 
@@ -189,6 +201,7 @@ async function searchUser(userNameFromUrl = null) {
     }
 }
 
+/* Visszaállítás (X gomb) */
 function resetApp() {
     currentChannelId = null;
     currentUserData = null;
@@ -205,7 +218,8 @@ function resetApp() {
         rateEl.innerHTML = '';
     }
 
-    updateURL(null);
+    // Titulus és URL visszaállítása alapértelmezettre
+    updatePageTitleAndURL(null);
 
     toggleSection('sec-stats', false);
     toggleSection('sec-viewer', false);
@@ -216,6 +230,7 @@ function resetApp() {
     }, 300);
 }
 
+/* URL és vissza gomb (Back/Forward) támogatás */
 async function initFromURL() {
     const pathParts = window.location.pathname.split('/').filter(p => p.length > 0);
 
@@ -227,8 +242,15 @@ async function initFromURL() {
             const userName = pathParts[1];
             await searchUser(userName);
         }
+    } else {
+        updatePageTitleAndURL(null);
     }
 }
+
+// Böngésző Vissza/Előre gombjának kezelése
+window.addEventListener('popstate', () => {
+    initFromURL();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('channel-input').addEventListener('keypress', e => {
