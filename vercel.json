@@ -1,5 +1,20 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+    "rewrites": [
+        {
+            "source": "/api/embed",
+            "destination": "/api/embed"
+        },
+        {
+            "source": "/:channel/:user",
+            "destination": "/api/embed"
+        },
+        {
+            "source": "/:channel",
+            "destination": "/api/embed"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
 }
