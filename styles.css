@@ -30,7 +30,9 @@
     --transition-slow: 400ms ease;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -92,14 +94,14 @@ body {
     grid-template-rows: 1fr;
 }
 
-.collapsible-section > .section-inner {
+.collapsible-section>.section-inner {
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-slow);
 }
 
-.collapsible-section.open > .section-inner {
+.collapsible-section.open>.section-inner {
     opacity: 1;
     pointer-events: auto;
 }
@@ -206,7 +208,9 @@ body {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .channel-card {
@@ -354,11 +358,11 @@ body {
     display: block;
 }
 
-.toggle-bar input[type="radio"]:checked + .toggle-label {
+.toggle-bar input[type="radio"]:checked+.toggle-label {
     color: var(--text-primary);
 }
 
-.toggle-bar.toggle-neutral input[type="radio"]:checked + .toggle-label {
+.toggle-bar.toggle-neutral input[type="radio"]:checked+.toggle-label {
     background: #374151;
 }
 
@@ -401,7 +405,6 @@ body {
     color: var(--text-primary);
 }
 
-/* Kattintható Rang Kártya Stílus */
 .stat-card-link {
     text-decoration: none;
     transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
@@ -432,7 +435,6 @@ body {
     color: var(--twitch);
 }
 
-/* Nézési Idő Kártya */
 .stat-card-watchtime {
     position: relative;
     overflow: hidden;
@@ -462,24 +464,52 @@ body {
 
 .stat-card-wide {
     grid-column: 1 / -1;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    text-align: left;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    padding: 1rem !important;
 }
 
-.stat-card-wide .stat-right {
-    text-align: right;
+/* Felső sor: Balra és jobbra szétnyomva */
+.stat-card-top {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    width: 100% !important;
 }
 
-.stat-card-wide .stat-value {
-    font-size: 1.25rem;
+.stat-card-top .stat-left {
+    text-align: left !important;
 }
 
-.stat-card-wide .stat-right .stat-value {
-    font-size: 1.125rem;
-    color: var(--text-muted);
+.stat-card-top .stat-right {
+    text-align: right !important;
+}
+
+.stat-card-top .stat-value {
+    font-size: 1.25rem !important;
+}
+
+.stat-card-top .stat-right .stat-value {
+    font-size: 1.125rem !important;
+    color: var(--text-muted) !important;
+}
+
+/* Alsó sor: Teljes szélességben középre igazítva */
+.stat-card-bottom {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+.stat-rate {
+    font-size: 0.75rem !important;
+    color: #a970ff !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
 }
 
 .info-banner {

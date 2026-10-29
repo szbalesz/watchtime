@@ -26,7 +26,6 @@ export default async function handler(req) {
     let channelName = pathParts[0] || null;
     const userName = pathParts[1] || null;
 
-    // Ha az index.html-re futna rá az átirányítás, kezeljük úgy, mintha üres lenne
     if (channelName === 'index.html') {
         channelName = null;
     }
@@ -77,10 +76,9 @@ export default async function handler(req) {
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${description}">
     <meta property="og:image" content="${avatarUrl}">
-    <meta property="og:site_name" content="watchtime.szbalesz.com">
+    <meta property="og:site_name" content="⚡ SE Watchtime & Pont Panel">
     <meta name="theme-color" content="#9146FF">
 
-    <!-- Twitter / Discord Summary Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
@@ -193,8 +191,9 @@ export default async function handler(req) {
                             <p class="stat-label">Nézési Idő</p>
                             <p class="stat-value" id="stat-watchtime">0 perc</p>
                         </div>
-                        <div class="stat-card stat-card-wide">
-                            <div>
+                       <div class="stat-card stat-card-wide">
+                        <div class="stat-card-top">
+                            <div class="stat-left">
                                 <p class="stat-label">Összes Pont (All-time)</p>
                                 <p class="stat-value" id="stat-points-alltime">0</p>
                             </div>
@@ -203,6 +202,10 @@ export default async function handler(req) {
                                 <p class="stat-value" id="stat-points">0</p>
                             </div>
                         </div>
+                        <div class="stat-card-bottom">
+                            <div id="stat-points-rate" class="stat-rate"></div>
+                        </div>
+                    </div>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,10 @@
 {
     "rewrites": [
         {
+            "source": "/api/loyalty",
+            "destination": "/api/loyalty"
+        },
+        {
             "source": "/api/embed",
             "destination": "/api/embed"
         },

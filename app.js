@@ -60,7 +60,6 @@ function setLoading(btnTextId, spinnerId, loading) {
     }
 }
 
-/* URL frissítése a böngészősávban oldalújratöltés nélkül */
 function updateURL(channel, user = null) {
     let path = '/';
     if (channel) {
@@ -93,24 +92,18 @@ async function searchChannel(channelNameFromUrl = null) {
         document.getElementById('channel-name').textContent = channelName;
         document.getElementById('channel-avatar').src = data.avatar || 'https://cdn.streamelements.com/static/user/profile_header_default.png';
 
-        // Dinamikus gomb linkek
         document.getElementById('link-streamelements').href = `https://streamelements.com/${input}`;
         document.getElementById('link-lurkology').href = `https://lurkology.com/${input}`;
-
-        // Rang kártya linkjének frissítése
         document.getElementById('stat-rank-link').href = `https://streamelements.com/${input}/leaderboard`;
 
         document.getElementById('channel-input').value = input;
         const userInput = document.getElementById('user-input');
 
-        // URL frissítése
         updateURL(input);
 
         toggleSection('sec-channel', false);
-        setTimeout(() => {
-            toggleSection('sec-viewer', true);
-            if (!channelNameFromUrl) userInput.focus();
-        }, 300);
+        toggleSection('sec-viewer', true);
+        if (!channelNameFromUrl) userInput.focus();
 
         return true;
 
@@ -135,13 +128,20 @@ async function searchUser(userNameFromUrl = null) {
     errorEl.classList.remove('visible');
     setLoading('user-btn-text', 'user-loading', true);
 
-    toggleSection('sec-stats', false);
+    const rateEl = document.getElementById('stat-points-rate');
+    if (rateEl) {
+        rateEl.innerHTML = '';
+    }
 
     try {
-        const response = await fetch(`https://api.streamelements.com/kappa/v2/points/${currentChannelId}/${input}`);
-        if (!response.ok) throw new Error('Nem található adat ehhez a nézőhöz.');
+        const [pointsRes, loyaltyRes] = await Promise.all([
+            fetch(`https://api.streamelements.com/kappa/v2/points/${currentChannelId}/${input}`),
+            fetch(`/api/loyalty?channelId=${currentChannelId}`).catch(() => null)
+        ]);
 
-        const data = await response.json();
+        if (!pointsRes.ok) throw new Error('Nem található adat ehhez a nézőhöz.');
+
+        const data = await pointsRes.json();
         currentUserData = data;
 
         document.getElementById('user-input').value = input;
@@ -149,15 +149,39 @@ async function searchUser(userNameFromUrl = null) {
         document.getElementById('stat-points').textContent = formatNumber(data.points);
         document.getElementById('stat-points-alltime').textContent = formatNumber(data.pointsAlltime);
 
+        // Loyalty adatok feldolgozása
+        if (rateEl && loyaltyRes && loyaltyRes.ok) {
+            try {
+                const rawData = await loyaltyRes.json();
+                const l = rawData.loyalty || rawData;
+
+                if (l && l.enabled !== false) {
+                    const amount = l.amount || 0;
+                    const interval = l.interval || 0;
+                    const subMult = l.subscriberMultiplier || 0;
+
+                    let txt = `⚡ +${amount} pont / ${interval} perc`;
+                    if (subMult > 1) {
+                        txt += ` (${subMult}x sub szorzó)`;
+                    }
+                    if (rateEl) rateEl.innerHTML = txt;
+                } else {
+                    if (rateEl) rateEl.innerHTML = '⚠️ A pontgyűjtés ki van kapcsolva';
+                }
+            } catch (lErr) {
+                console.error('Loyalty error:', lErr);
+            }
+        }
+
         updateWatchtimeDisplay();
 
-        // URL frissítése a csatorna + néző párossal
         const channelInput = document.getElementById('channel-input').value.trim().toLowerCase();
         updateURL(channelInput, input);
 
-        setTimeout(() => toggleSection('sec-stats', true), 200);
+        toggleSection('sec-stats', true);
 
     } catch (error) {
+        toggleSection('sec-stats', false);
         errorEl.textContent = error.message;
         errorEl.classList.add('visible');
     } finally {
@@ -165,7 +189,6 @@ async function searchUser(userNameFromUrl = null) {
     }
 }
 
-/* Visszaállítás (X gomb) */
 function resetApp() {
     currentChannelId = null;
     currentUserData = null;
@@ -177,7 +200,11 @@ function resetApp() {
     channelInput.value = '';
     document.getElementById('user-input').value = '';
 
-    // URL visszaállítása gyökérre
+    const rateEl = document.getElementById('stat-points-rate');
+    if (rateEl) {
+        rateEl.innerHTML = '';
+    }
+
     updateURL(null);
 
     toggleSection('sec-stats', false);
@@ -189,7 +216,6 @@ function resetApp() {
     }, 300);
 }
 
-/* URL kiértékelése betöltéskor (pl. /2okos/szbalesz) */
 async function initFromURL() {
     const pathParts = window.location.pathname.split('/').filter(p => p.length > 0);
 
@@ -212,6 +238,5 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') searchUser();
     });
 
-    // Indításkor URL paraméterek ellenőrzése
     initFromURL();
 });

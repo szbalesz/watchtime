@@ -14,7 +14,7 @@
     <meta property="og:description"
         content="Kérdezd le a nézési idődet és pontjaidat bármelyik StreamElements-et használó Twitch csatornán egyetlen kattintással!">
     <meta property="og:image" content="https://cdn.streamelements.com/assets/homepage/streamelements-logo.png">
-    <meta property="og:site_name" content="watchtime.szbalesz.com">
+    <meta property="og:site_name" content="⚡ SE Watchtime & Pont Panel">
     <meta name="theme-color" content="#9146FF">
 
     <meta name="twitter:card" content="summary">
@@ -132,7 +132,6 @@
 
                     <!-- Statisztika kártyák -->
                     <div class="stats-grid">
-                        <!-- Kattintható Rang kártya -->
                         <a id="stat-rank-link" href="#" target="_blank" class="stat-card stat-card-link"
                             title="Megnyitás a StreamElements ranglistán">
                             <div class="stat-link-header">
@@ -150,13 +149,18 @@
                             <p class="stat-value" id="stat-watchtime">0 perc</p>
                         </div>
                         <div class="stat-card stat-card-wide">
-                            <div>
-                                <p class="stat-label">Összes Pont (All-time)</p>
-                                <p class="stat-value" id="stat-points-alltime">0</p>
+                            <div class="stat-card-top">
+                                <div class="stat-left">
+                                    <p class="stat-label">Összes Pont (All-time)</p>
+                                    <p class="stat-value" id="stat-points-alltime">0</p>
+                                </div>
+                                <div class="stat-right">
+                                    <p class="stat-label">Jelenlegi pont</p>
+                                    <p class="stat-value" id="stat-points">0</p>
+                                </div>
                             </div>
-                            <div class="stat-right">
-                                <p class="stat-label">Jelenlegi pont</p>
-                                <p class="stat-value" id="stat-points">0</p>
+                            <div class="stat-card-bottom">
+                                <div id="stat-points-rate" class="stat-rate"></div>
                             </div>
                         </div>
                     </div>
