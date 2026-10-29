@@ -60,12 +60,24 @@ function setLoading(btnTextId, spinnerId, loading) {
     }
 }
 
+/* URL frissítése a böngészősávban oldalújratöltés nélkül */
+function updateURL(channel, user = null) {
+    let path = '/';
+    if (channel) {
+        path += channel;
+        if (user) {
+            path += `/${user}`;
+        }
+    }
+    window.history.pushState({}, '', path);
+}
+
 /* 1. Lépés: Csatorna keresése */
-async function searchChannel() {
-    const input = document.getElementById('channel-input').value.trim().toLowerCase();
+async function searchChannel(channelNameFromUrl = null) {
+    const input = channelNameFromUrl || document.getElementById('channel-input').value.trim().toLowerCase();
     const errorEl = document.getElementById('channel-error');
 
-    if (!input) return;
+    if (!input) return false;
 
     errorEl.classList.remove('visible');
     setLoading('channel-btn-text', 'channel-loading', true);
@@ -88,28 +100,34 @@ async function searchChannel() {
         // Rang kártya linkjének frissítése
         document.getElementById('stat-rank-link').href = `https://streamelements.com/${input}/leaderboard`;
 
+        document.getElementById('channel-input').value = input;
         const userInput = document.getElementById('user-input');
-        userInput.value = '';
+
+        // URL frissítése
+        updateURL(input);
 
         toggleSection('sec-channel', false);
         setTimeout(() => {
             toggleSection('sec-viewer', true);
-            userInput.focus();
+            if (!channelNameFromUrl) userInput.focus();
         }, 300);
+
+        return true;
 
     } catch (error) {
         errorEl.textContent = error.message;
         errorEl.classList.add('visible');
+        return false;
     } finally {
         setLoading('channel-btn-text', 'channel-loading', false);
     }
 }
 
 /* 2. Lépés: Néző adatok lekérése */
-async function searchUser() {
+async function searchUser(userNameFromUrl = null) {
     if (!currentChannelId) return;
 
-    const input = document.getElementById('user-input').value.trim().toLowerCase();
+    const input = userNameFromUrl || document.getElementById('user-input').value.trim().toLowerCase();
     const errorEl = document.getElementById('user-error');
 
     if (!input) return;
@@ -126,11 +144,16 @@ async function searchUser() {
         const data = await response.json();
         currentUserData = data;
 
+        document.getElementById('user-input').value = input;
         document.getElementById('stat-rank').textContent = formatNumber(data.rank);
         document.getElementById('stat-points').textContent = formatNumber(data.points);
         document.getElementById('stat-points-alltime').textContent = formatNumber(data.pointsAlltime);
 
         updateWatchtimeDisplay();
+
+        // URL frissítése a csatorna + néző párossal
+        const channelInput = document.getElementById('channel-input').value.trim().toLowerCase();
+        updateURL(channelInput, input);
 
         setTimeout(() => toggleSection('sec-stats', true), 200);
 
@@ -154,6 +177,9 @@ function resetApp() {
     channelInput.value = '';
     document.getElementById('user-input').value = '';
 
+    // URL visszaállítása gyökérre
+    updateURL(null);
+
     toggleSection('sec-stats', false);
     toggleSection('sec-viewer', false);
 
@@ -163,6 +189,21 @@ function resetApp() {
     }, 300);
 }
 
+/* URL kiértékelése betöltéskor (pl. /2okos/szbalesz) */
+async function initFromURL() {
+    const pathParts = window.location.pathname.split('/').filter(p => p.length > 0);
+
+    if (pathParts.length >= 1) {
+        const channelName = pathParts[0];
+        const success = await searchChannel(channelName);
+
+        if (success && pathParts.length >= 2) {
+            const userName = pathParts[1];
+            await searchUser(userName);
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('channel-input').addEventListener('keypress', e => {
         if (e.key === 'Enter') searchChannel();
@@ -170,4 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('user-input').addEventListener('keypress', e => {
         if (e.key === 'Enter') searchUser();
     });
+
+    // Indításkor URL paraméterek ellenőrzése
+    initFromURL();
 });
