@@ -6,7 +6,7 @@ import { Providers } from './components/Providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: '⚡ SE Watchtime & Pont Panel',
+  title: 'SE Watchtime & Pont Panel',
   description: 'Kérdezd le a nézési idődet és pontjaidat bármelyik StreamElements-et használó Twitch csatornán!',
   icons: {
     icon: '/logo.png',

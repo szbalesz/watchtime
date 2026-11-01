@@ -38,6 +38,7 @@ function WatchtimeContent() {
   const [userLoading, setUserLoading] = useState(false);
 
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isLockedByGuild, setIsLockedByGuild] = useState(false);
 
   const [channelError, setChannelError] = useState('');
   const [userError, setUserError] = useState('');
@@ -139,6 +140,7 @@ function WatchtimeContent() {
     }
   }, [status, isDiscordActivity]);
 
+  // Kezdeti adatok betöltése
   useEffect(() => {
     if (hasInitialLoaded) return;
 
@@ -153,6 +155,8 @@ function WatchtimeContent() {
         queryChannel = urlParams.get('channel') || urlParams.get('link_id');
         if (!queryUser) queryUser = urlParams.get('user');
       }
+
+      let locked = false;
 
       if (!queryChannel && isDiscordActivity && typeof window !== 'undefined') {
         try {
@@ -172,6 +176,7 @@ function WatchtimeContent() {
 
             if (guildChannelMap[guildId]) {
               queryChannel = guildChannelMap[guildId];
+              locked = true;
             }
           }
         } catch (e) {
@@ -179,8 +184,10 @@ function WatchtimeContent() {
         }
       }
 
+      setIsLockedByGuild(locked);
+
       const targetChannel = (slug && slug[0]) || queryChannel;
-      const targetUser = (slug && slug[1]) || queryUser || (session ? getExactUsername() : '');
+      const resolvedUser = (slug && slug[1]) || queryUser || (session ? getExactUsername() : '');
 
       if (targetChannel) {
         setChannelInput(targetChannel);
@@ -196,9 +203,9 @@ function WatchtimeContent() {
             };
             setChannelData(realCh);
 
-            if (targetUser) {
-              setUserInput(targetUser);
-              await executeUserSearch(realCh.id, targetUser, targetChannel, false);
+            if (resolvedUser) {
+              setUserInput(resolvedUser);
+              await executeUserSearch(realCh.id, resolvedUser, targetChannel, false);
             }
           }
         } finally {
@@ -206,13 +213,18 @@ function WatchtimeContent() {
           setIsInitializing(false);
         }
       } else {
+        if (resolvedUser) {
+          setUserInput(resolvedUser);
+        }
         setHasInitialLoaded(true);
         setIsInitializing(false);
       }
     };
 
-    loadInitialData();
-  }, [params, searchParams, session, hasInitialLoaded, isDiscordActivity]);
+    if (!isDiscordActivity || status !== 'loading') {
+      loadInitialData();
+    }
+  }, [params, searchParams, session, status, hasInitialLoaded, isDiscordActivity]);
 
   const handleSearchChannel = async (targetChannel?: string) => {
     const input = (targetChannel || channelInput).trim().toLowerCase();
@@ -233,12 +245,13 @@ function WatchtimeContent() {
       };
       setChannelData(realChannel);
 
-      if (!userInput) {
-        updateURL(input);
-      }
+      const activeUser = userInput.trim() || (session ? getExactUsername() : '');
 
-      if (session && !userInput) {
-        setUserInput(getExactUsername());
+      if (!activeUser) {
+        updateURL(input);
+      } else {
+        updateURL(input, activeUser);
+        executeUserSearch(realChannel.id, activeUser, input, false);
       }
 
       setTimeout(() => {
@@ -307,10 +320,11 @@ function WatchtimeContent() {
   };
 
   const handleReset = () => {
+    if (isLockedByGuild) return;
     setChannelData(null);
     setUserData(null);
     setChannelInput('');
-    setUserInput('');
+    setUserInput(session ? getExactUsername() : '');
     setChannelError('');
     setUserError('');
     setRateText('');
@@ -422,10 +436,14 @@ function WatchtimeContent() {
                           <img src={`/api/proxy/image?url=${encodeURIComponent(channelData.avatar)}`} alt="Avatar" className="w-10 h-10 rounded-full border border-[#9146FF] object-cover" />
                           <div>
                             <h2 className="text-sm font-bold text-white">{channelData.name}</h2>
-                            <p className="text-[11px] text-gray-400">Kiválasztott csatorna</p>
+                            <p className="text-[11px] text-gray-400">
+                              {isLockedByGuild ? 'Szerverhez rögzített csatorna' : 'Kiválasztott csatorna'}
+                            </p>
                           </div>
                         </div>
-                        <button onClick={handleReset} className="text-gray-400 hover:text-white p-2 text-sm transition">✕</button>
+                        {!isLockedByGuild && (
+                          <button onClick={handleReset} className="text-gray-400 hover:text-white p-2 text-sm transition">✕</button>
+                        )}
                       </div>
 
                       {!isDiscordActivity && (
@@ -694,7 +712,7 @@ function WatchtimeContent() {
                         <div
                           key={item.channelLogin}
                           onClick={() => {
-                            const exactUser = getExactUsername();
+                            const exactUser = userInput.trim() || getExactUsername();
                             setUserInput(exactUser);
 
                             setUserLoading(true);
@@ -709,7 +727,9 @@ function WatchtimeContent() {
                                 setChannelData(realCh);
                                 setChannelInput(item.channelLogin);
 
-                                executeUserSearch(cData._id, exactUser, item.channelLogin);
+                                if (exactUser) {
+                                  executeUserSearch(cData._id, exactUser, item.channelLogin);
+                                }
                               });
                           }}
                           className="bg-[#030712] border border-[#1f2937] hover:border-[#9146FF]/50 rounded-2xl p-3 flex items-center justify-between gap-3 cursor-pointer transition duration-200 hover:translate-x-1 shrink-0"
