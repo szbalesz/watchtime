@@ -37,7 +37,10 @@ function WatchtimeContent() {
 
   const [channelError, setChannelError] = useState('');
   const [userError, setUserError] = useState('');
+
+  // Külön formátumváltó a bal oldali profilkártyának és a jobb oldali ranglistának
   const [timeFormat, setTimeFormat] = useState<'formatted' | 'minutes'>('formatted');
+  const [leaderboardTimeFormat, setLeaderboardTimeFormat] = useState<'formatted' | 'minutes'>('formatted');
 
   const [leaderboardStats, setLeaderboardStats] = useState<FollowStat[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
@@ -45,6 +48,9 @@ function WatchtimeContent() {
 
   const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
   const userInputRef = useRef<HTMLInputElement>(null);
+
+  // Összesített Watchtime kiszámolása a ranglistából
+  const totalLeaderboardWatchtime = leaderboardStats.reduce((sum, item) => sum + (item.watchtime || 0), 0);
 
   // Auto Kijelentkezés, ha a Refresh Token meghalt
   useEffect(() => {
@@ -113,7 +119,6 @@ function WatchtimeContent() {
       setLeaderboardLoading(true);
       fetch('/api/user-follows-stats')
         .then((res) => {
-          // Ha a szerver 401-et (Unauthorized) dob, kiléptetjük a felhasználót
           if (res.status === 401) {
             signOut();
             throw new Error('A munkamenet lejárt. Kérlek, jelentkezz be újra.');
@@ -264,7 +269,6 @@ function WatchtimeContent() {
   };
 
   return (
-    // Mobilon min-h-screen (görgethető), PC-n fix (h-screen és hidden)
     <div className="w-full min-h-screen lg:h-screen flex flex-col bg-[#030712] lg:overflow-hidden">
 
       {/* NAVBAR */}
@@ -274,7 +278,6 @@ function WatchtimeContent() {
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#9146FF]/10 border border-[#9146FF]/30 flex items-center justify-center shadow-lg shadow-[#9146FF]/10 shrink-0">
               <span className="text-[#9146FF] text-lg sm:text-xl font-black">⚡</span>
             </div>
-            {/* Mobilon kisebb betű, truncate hogy ne törjön be alá */}
             <h1 className="text-[12px] sm:text-sm md:text-base font-black text-white tracking-wide truncate">
               StreamElements Watchtime
             </h1>
@@ -314,12 +317,13 @@ function WatchtimeContent() {
       <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 flex flex-col lg:min-h-0 lg:overflow-y-auto lg:overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start lg:h-full lg:min-h-0">
 
-          {/* BAL OSZLOP */}
+          {/* BAL OSZLOP (Magasság rásimul a tartalomra a feltételes renderelés miatt) */}
           <div className="lg:col-span-6 w-full h-fit bg-[#111827] border border-[#1f2937] rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col gap-5 transition-all duration-300">
             <div className="flex flex-col gap-5">
 
-              <div className={`collapsible-grid ${!channelData ? 'open' : ''}`}>
-                <div className="collapsible-inner flex flex-col gap-3">
+              {/* 1. Csatorna keresés (Csak ha nincs aktív csatorna) */}
+              {!channelData && (
+                <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <label className="text-xs font-semibold text-gray-400">Twitch Csatorna Neve</label>
                   <input
                     type="text"
@@ -338,15 +342,16 @@ function WatchtimeContent() {
                   </button>
                   {channelError && <p className="text-red-400 text-xs text-center">{channelError}</p>}
                 </div>
-              </div>
+              )}
 
-              <div className={`collapsible-grid ${channelData ? 'open' : ''}`}>
-                <div className="collapsible-inner flex flex-col gap-4">
+              {/* 2. Néző kereső és csatorna infó (Ha már kerestünk csatornát) */}
+              {channelData && (
+                <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="bg-[#030712] border border-[#3e1f72] rounded-2xl p-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <img src={channelData?.avatar} alt="Avatar" className="w-10 h-10 rounded-full border border-[#9146FF] object-cover" />
+                      <img src={channelData.avatar} alt="Avatar" className="w-10 h-10 rounded-full border border-[#9146FF] object-cover" />
                       <div>
-                        <h2 className="text-sm font-bold text-white">{channelData?.name}</h2>
+                        <h2 className="text-sm font-bold text-white">{channelData.name}</h2>
                         <p className="text-[11px] text-gray-400">Kiválasztott csatorna</p>
                       </div>
                     </div>
@@ -355,7 +360,7 @@ function WatchtimeContent() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <a
-                      href={`https://streamelements.com/${channelInput || channelData?.name}`}
+                      href={`https://streamelements.com/${channelInput || channelData.name}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex flex-col items-center justify-center bg-[#030712] border border-[#1f2937] hover:border-[#9146FF] rounded-xl p-2.5 text-gray-400 hover:text-white transition duration-200 group"
@@ -367,7 +372,7 @@ function WatchtimeContent() {
                     </a>
 
                     <a
-                      href={`https://lurkology.com/${channelInput || channelData?.name}`}
+                      href={`https://lurkology.com/${channelInput || channelData.name}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex flex-col items-center justify-center bg-[#030712] border border-[#1f2937] hover:border-[#9146FF] rounded-xl p-2.5 text-gray-400 hover:text-white transition duration-200 group"
@@ -400,8 +405,9 @@ function WatchtimeContent() {
                     {userError && <p className="text-red-400 text-xs text-center">{userError}</p>}
                   </div>
                 </div>
-              </div>
+              )}
 
+              {/* Skeleton betöltő (felhasználó keresésekor) */}
               {userLoading && (
                 <div className="flex flex-col gap-3 animate-pulse pt-2">
                   <div className="grid grid-cols-2 gap-3">
@@ -412,69 +418,70 @@ function WatchtimeContent() {
                 </div>
               )}
 
-              {!userLoading && (
-                <div className={`collapsible-grid ${userData ? 'open' : ''}`}>
-                  <div className="collapsible-inner flex flex-col gap-4 border-t border-[#1f2937] pt-4">
-                    <div className="flex bg-[#030712] border border-[#1f2937] p-1 rounded-xl text-xs font-semibold text-center">
-                      <button
-                        onClick={() => setTimeFormat('formatted')}
-                        className={`flex-1 py-1.5 rounded-lg transition ${timeFormat === 'formatted' ? 'bg-[#374151] text-white' : 'text-gray-400'}`}
-                      >
-                        Nap / Óra
-                      </button>
-                      <button
-                        onClick={() => setTimeFormat('minutes')}
-                        className={`flex-1 py-1.5 rounded-lg transition ${timeFormat === 'minutes' ? 'bg-[#374151] text-white' : 'text-gray-400'}`}
-                      >
-                        Csak Perc
-                      </button>
+              {/* 3. Statisztikák (Ha a néző adatai betöltöttek) */}
+              {!userLoading && userData && (
+                <div className="flex flex-col gap-4 border-t border-[#1f2937] pt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+
+                  <div className="flex bg-[#030712] border border-[#1f2937] p-1 rounded-xl text-xs font-semibold text-center">
+                    <button
+                      onClick={() => setTimeFormat('formatted')}
+                      className={`flex-1 py-1.5 rounded-lg transition ${timeFormat === 'formatted' ? 'bg-[#374151] text-white' : 'text-gray-400'}`}
+                    >
+                      Nap / Óra
+                    </button>
+                    <button
+                      onClick={() => setTimeFormat('minutes')}
+                      className={`flex-1 py-1.5 rounded-lg transition ${timeFormat === 'minutes' ? 'bg-[#374151] text-white' : 'text-gray-400'}`}
+                    >
+                      Csak Perc
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <a
+                      href={`https://streamelements.com/${channelInput || channelData?.name}/leaderboard`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#030712] border border-[#1f2937] hover:border-[#9146FF] p-3.5 rounded-2xl text-center transition group"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 group-hover:text-[#9146FF] transition">Rang / Helyezés</p>
+                        <svg className="w-3 h-3 text-gray-500 group-hover:text-[#9146FF] transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </div>
+                      <p className="text-xl font-black text-white">#{formatNumber(userData.rank || 0)}</p>
+                    </a>
+
+                    <div className="bg-[#030712] border border-[#1f2937] p-3.5 rounded-2xl text-center relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-[#9146FF]" />
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#9146FF]">Nézési Idő</p>
+                      <p className="text-sm font-extrabold text-white mt-1">{formatTime(userData.watchtime || 0, timeFormat === 'minutes')}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <a
-                        href={`https://streamelements.com/${channelInput || channelData?.name}/leaderboard`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-[#030712] border border-[#1f2937] hover:border-[#9146FF] p-3.5 rounded-2xl text-center transition group"
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 group-hover:text-[#9146FF] transition">Rang / Helyezés</p>
-                          <svg className="w-3 h-3 text-gray-500 group-hover:text-[#9146FF] transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
+                    <div className="col-span-2 bg-[#030712] border border-[#1f2937] p-4 rounded-2xl flex flex-col gap-2">
+                      <div className="flex justify-between items-start w-full">
+                        <div className="text-left">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Összes Pont (All-time)</p>
+                          <p className="text-lg font-black text-white">{formatNumber(userData.pointsAlltime || 0)}</p>
                         </div>
-                        <p className="text-xl font-black text-white">#{formatNumber(userData?.rank || 0)}</p>
-                      </a>
-
-                      <div className="bg-[#030712] border border-[#1f2937] p-3.5 rounded-2xl text-center relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-[#9146FF]" />
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#9146FF]">Nézési Idő</p>
-                        <p className="text-sm font-extrabold text-white mt-1">{formatTime(userData?.watchtime || 0, timeFormat === 'minutes')}</p>
-                      </div>
-
-                      <div className="col-span-2 bg-[#030712] border border-[#1f2937] p-4 rounded-2xl flex flex-col gap-2">
-                        <div className="flex justify-between items-start w-full">
-                          <div className="text-left">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Összes Pont (All-time)</p>
-                            <p className="text-lg font-black text-white">{formatNumber(userData?.pointsAlltime || 0)}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Jelenlegi pont</p>
-                            <p className="text-base font-bold text-gray-300">{formatNumber(userData?.points || 0)}</p>
-                          </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Jelenlegi pont</p>
+                          <p className="text-base font-bold text-gray-300">{formatNumber(userData.points || 0)}</p>
                         </div>
-                        {rateText && (
-                          <div className="w-full text-center mt-1">
-                            <p className="text-xs font-semibold text-[#a970ff]">{rateText}</p>
-                          </div>
-                        )}
                       </div>
+                      {rateText && (
+                        <div className="w-full text-center mt-1">
+                          <p className="text-xs font-semibold text-[#a970ff]">{rateText}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
+            {/* Infó Banner */}
             <div className="bg-[#030712] border border-[#1f2937] rounded-2xl p-3.5 flex items-start gap-3 mt-1">
               <svg className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -485,19 +492,50 @@ function WatchtimeContent() {
             </div>
           </div>
 
-          {/* JOBB OSZLOP: RANGLISTA (Mobilon fix magasság görgetősávval, PC-n kitölti a teret) */}
-          <div className="lg:col-span-6 w-full h-[32rem] lg:h-full bg-[#111827] border border-[#1f2937] rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col gap-4 relative overflow-hidden min-h-0">
-            <div className="border-b border-[#1f2937] pb-3 shrink-0">
-              <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                🏆 Követett Csatornák Ranglistája
-              </h2>
-              <p className="text-[11px] sm:text-xs text-gray-400">Ahol a legtöbb időt töltötted a StreamElements szerint</p>
+          {/* JOBB OSZLOP: RANGLISTA */}
+          <div className="lg:col-span-6 w-full h-[40rem] lg:h-full bg-[#111827] border border-[#1f2937] rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col gap-4 relative overflow-hidden min-h-0">
+
+            {/* FEJLÉC: Teljes Watchtime és Kapcsolóval */}
+            <div className="border-b border-[#1f2937] pb-4 shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 sm:gap-2">
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  🏆 Követett Csatornák Ranglistája
+                </h2>
+                <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Ahol a legtöbb időt töltötted a StreamElements szerint</p>
+
+                {session && !leaderboardLoading && !leaderboardError && leaderboardStats.length > 0 && (
+                  <div className="mt-3 flex items-center gap-2 bg-[#030712] border border-[#9146FF]/30 px-3 py-1.5 rounded-xl w-fit">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Összesen:</span>
+                    <span className="text-xs font-black text-[#9146FF] drop-shadow-[0_0_8px_rgba(145,70,255,0.4)]">
+                      {formatTime(totalLeaderboardWatchtime, leaderboardTimeFormat === 'minutes')}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {session && !leaderboardLoading && !leaderboardError && leaderboardStats.length > 0 && (
+                <div className="flex bg-[#030712] border border-[#1f2937] p-1 rounded-xl text-[10px] font-semibold text-center shrink-0 w-full sm:w-auto">
+                  <button
+                    onClick={() => setLeaderboardTimeFormat('formatted')}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition ${leaderboardTimeFormat === 'formatted' ? 'bg-[#374151] text-white' : 'text-gray-400'}`}
+                  >
+                    Nap / Óra
+                  </button>
+                  <button
+                    onClick={() => setLeaderboardTimeFormat('minutes')}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition ${leaderboardTimeFormat === 'minutes' ? 'bg-[#374151] text-white' : 'text-gray-400'}`}
+                  >
+                    Csak Perc
+                  </button>
+                </div>
+              )}
             </div>
 
             {!session && status !== 'loading' && (
               <div className="relative w-full flex-1 flex items-center justify-center min-h-0">
+                {/* Kijelentkezett Skeleton Háttere (12 db kártya, hogy betöltse a teret) */}
                 <div className="absolute inset-0 flex flex-col gap-3 opacity-30 blur-[3px] select-none pointer-events-none overflow-hidden">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
                     <div key={i} className="bg-[#030712] border border-[#1f2937] rounded-2xl p-3 flex items-center justify-between shrink-0">
                       <div className="flex items-center gap-3">
                         <div className="w-4 h-4 bg-gray-700 rounded"></div>
@@ -535,9 +573,10 @@ function WatchtimeContent() {
 
             {session && (
               <div className="flex-1 min-h-0 flex flex-col">
+                {/* Bejelentkezett állapot töltési skeletonja (12 kártyával a biztos lefedettségért) */}
                 {leaderboardLoading && (
-                  <div className="flex flex-col gap-3 animate-pulse overflow-hidden">
-                    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <div className="flex flex-col gap-3 animate-pulse overflow-hidden h-full">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
                       <div key={i} className="bg-[#030712] border border-[#1f2937] rounded-2xl p-3 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-3">
                           <div className="w-4 h-4 bg-gray-800 rounded"></div>
@@ -599,7 +638,9 @@ function WatchtimeContent() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-extrabold text-white">{formatTime(item.watchtime)}</p>
+                          <p className="text-xs font-extrabold text-white">
+                            {formatTime(item.watchtime, leaderboardTimeFormat === 'minutes')}
+                          </p>
                           <p className="text-[10px] text-gray-400">{formatNumber(item.points)} pont</p>
                         </div>
                       </div>
