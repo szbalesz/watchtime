@@ -32,8 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     let title = "⚡ SE Watchtime & Pont Panel";
     let description = "Kérdezd le a nézési idődet és pontjaidat bármelyik StreamElements-et használó Twitch csatornán!";
-    let avatarUrl = "https://cdn.streamelements.com/assets/homepage/streamelements-logo.png";
-
+    let avatarUrl = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239146FF'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M13 10V3L4 14h7v7l9-11h-7z'/%3E%3C/svg%3E";
     if (channelName) {
         try {
             const chRes = await fetch(`https://api.streamelements.com/kappa/v2/channels/${channelName}`, { next: { revalidate: 60 } });
