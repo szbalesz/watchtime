@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+  
+  # ⚡ StreamElements Watchtime Panel
+  
+  **Egy modern, villámgyors és letisztult felület a Twitch nézési időd és pontjaid követésére.**
 
-## Getting Started
+  [![Live Demo](https://img.shields.io/badge/Live_Demo-watchtime.szbalesz.com-9146FF?style=for-the-badge&logo=twitch&logoColor=white)](https://watchtime.szbalesz.com)
+  [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38BDF8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
+  [![No Database](https://img.shields.io/badge/Database-No_DB-10B981?style=for-the-badge&logo=sqlite&logoColor=white)]()
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
-First, run the development server:
+</div>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> [!NOTE]
+> 🟢 **Élőben kipróbálható:** [watchtime.szbalesz.com](https://watchtime.szbalesz.com)  
+> *Lekérdezd le a nézési idődet és pontjaidat bármelyik StreamElements rendszert használó Twitch csatornán egyetlen kattintással!*
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ✨ Főbb Funkciók
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* 🔍 **Villámgyors Keresés:** Néző- és csatornanév alapján azonnali lekérdezés.
+* 🏆 **Saját Ranglista:** Twitch bejelentkezés után a rendszer végignézi a követett csatornáidat, és generál egy személyes toplistát a legtöbbet nézett streamerekből.
+* 🔗 **Okos URL-ek & Megosztás:** A `/csatornanev/felhasznalonev` formátumú linkek azonnal betöltik az adatokat, és közösségi oldalakon (pl. Discord) szép előnézeti kártyát (OpenGraph) adnak.
+* 🌓 **Modern UI/UX:** Kijelzőt kitöltő, üveg hatású (Glassmorphism) dizájn, finom animációk, asztali és mobil eszközökre egyaránt optimalizálva.
+* ⚡ **Gyorshivatkozások:** Egyetlen kattintás a kiválasztott csatorna hivatalos StreamElements leaderboardjára, vagy a Lurkology oldalára.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛡️ Adatvédelem és Biztonság (No-DB)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> [!IMPORTANT]
+> **Ez az alkalmazás SEMMILYEN adatot nem tárol szerveroldalon.** Nincs mögötte adatbázis. A lekérdezett statisztikák és a profilod adatai kizárólag a böngésződben és a memóriában léteznek a munkamenet idejéig.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+* **Twitch Hitelesítés (OAuth):** A bejelentkezés pusztán egy olvasható (Read-Only) hozzáférést kér a követett csatornáid listájához a ranglista elkészítéséhez.
+* Nincsenek rejtett nyomkövetők és nem mentjük a keresési előzményeidet. A kód 100%-ban nyílt forráskódú és transzparens.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠️ Használt Technológiák
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Az oldal a legújabb webes sztenderdek szerint épült fel:
+
+* **Framework:** Next.js (App Router)
+* **Dizájn:** Tailwind CSS
+* **Autentikáció:** NextAuth.js
+* **Adatforrások:** StreamElements Kappa API & Twitch Helix API
+
+---
+
+<div align="center">
+  <sub>Készítette: <b><a href="https://szbalesz.com">szbalesz</a></b> | Licensz: MIT</sub>
+</div>
