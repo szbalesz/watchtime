@@ -280,8 +280,8 @@ function WatchtimeContent() {
         <header className="sticky top-0 z-50 w-full bg-[#030712]/80 backdrop-blur-md border-b border-[#1f2937]/80 shrink-0">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#9146FF]/10 border border-[#9146FF]/30 flex items-center justify-center shadow-lg shadow-[#9146FF]/10 shrink-0">
-                <span className="text-[#9146FF] text-lg sm:text-xl font-black">⚡</span>
+              <div className="w-8 h-8 p-2 sm:w-9 sm:h-9 rounded-xl bg-[#9146FF]/10 border border-[#9146FF]/30 flex items-center justify-center shadow-lg shadow-[#9146FF]/10 shrink-0 overflow-hidden">
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <h1 className="text-[12px] sm:text-sm md:text-base font-black text-white tracking-wide truncate">
                 StreamElements Watchtime
