@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useParams } from 'next/navigation';
+import { TrophyIcon } from 'lucide-react';
 
 interface UserData {
   watchtime: number;
@@ -38,21 +39,19 @@ function WatchtimeContent() {
   const [channelError, setChannelError] = useState('');
   const [userError, setUserError] = useState('');
 
-  // Külön formátumváltó a bal oldali profilkártyának és a jobb oldali ranglistának
   const [timeFormat, setTimeFormat] = useState<'formatted' | 'minutes'>('formatted');
   const [leaderboardTimeFormat, setLeaderboardTimeFormat] = useState<'formatted' | 'minutes'>('formatted');
 
   const [leaderboardStats, setLeaderboardStats] = useState<FollowStat[]>([]);
+  const [totalFollows, setTotalFollows] = useState<number>(0);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState('');
 
   const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
   const userInputRef = useRef<HTMLInputElement>(null);
 
-  // Összesített Watchtime kiszámolása a ranglistából
   const totalLeaderboardWatchtime = leaderboardStats.reduce((sum, item) => sum + (item.watchtime || 0), 0);
 
-  // Auto Kijelentkezés, ha a Refresh Token meghalt
   useEffect(() => {
     if (session && (session as any).error === "RefreshAccessTokenError") {
       signOut();
@@ -126,7 +125,10 @@ function WatchtimeContent() {
           if (!res.ok) throw new Error('Nem sikerült betölteni a ranglistát.');
           return res.json();
         })
-        .then((data) => setLeaderboardStats(data.stats || []))
+        .then((data) => {
+          setLeaderboardStats(data.stats || []);
+          setTotalFollows(data.totalFollows || data.stats?.length || 0);
+        })
         .catch((err) => setLeaderboardError(err.message))
         .finally(() => setLeaderboardLoading(false));
     }
@@ -271,7 +273,6 @@ function WatchtimeContent() {
   return (
     <div className="w-full min-h-screen lg:h-screen flex flex-col bg-[#030712] lg:overflow-hidden">
 
-      {/* NAVBAR */}
       <header className="sticky top-0 z-50 w-full bg-[#030712]/80 backdrop-blur-md border-b border-[#1f2937]/80 shrink-0">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -313,15 +314,12 @@ function WatchtimeContent() {
         </div>
       </header>
 
-      {/* FŐ TARTALOM */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 flex flex-col lg:min-h-0 lg:overflow-y-auto lg:overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start lg:h-full lg:min-h-0">
 
-          {/* BAL OSZLOP (Magasság rásimul a tartalomra a feltételes renderelés miatt) */}
           <div className="lg:col-span-6 w-full h-fit bg-[#111827] border border-[#1f2937] rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col gap-5 transition-all duration-300">
             <div className="flex flex-col gap-5">
 
-              {/* 1. Csatorna keresés (Csak ha nincs aktív csatorna) */}
               {!channelData && (
                 <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <label className="text-xs font-semibold text-gray-400">Twitch Csatorna Neve</label>
@@ -344,7 +342,6 @@ function WatchtimeContent() {
                 </div>
               )}
 
-              {/* 2. Néző kereső és csatorna infó (Ha már kerestünk csatornát) */}
               {channelData && (
                 <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="bg-[#030712] border border-[#3e1f72] rounded-2xl p-3 flex items-center justify-between">
@@ -407,7 +404,6 @@ function WatchtimeContent() {
                 </div>
               )}
 
-              {/* Skeleton betöltő (felhasználó keresésekor) */}
               {userLoading && (
                 <div className="flex flex-col gap-3 animate-pulse pt-2">
                   <div className="grid grid-cols-2 gap-3">
@@ -418,7 +414,6 @@ function WatchtimeContent() {
                 </div>
               )}
 
-              {/* 3. Statisztikák (Ha a néző adatai betöltöttek) */}
               {!userLoading && userData && (
                 <div className="flex flex-col gap-4 border-t border-[#1f2937] pt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
@@ -481,7 +476,6 @@ function WatchtimeContent() {
               )}
             </div>
 
-            {/* Infó Banner */}
             <div className="bg-[#030712] border border-[#1f2937] rounded-2xl p-3.5 flex items-start gap-3 mt-1">
               <svg className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -492,23 +486,29 @@ function WatchtimeContent() {
             </div>
           </div>
 
-          {/* JOBB OSZLOP: RANGLISTA */}
           <div className="lg:col-span-6 w-full h-[40rem] lg:h-full bg-[#111827] border border-[#1f2937] rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col gap-4 relative overflow-hidden min-h-0">
 
-            {/* FEJLÉC: Teljes Watchtime és Kapcsolóval */}
             <div className="border-b border-[#1f2937] pb-4 shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 sm:gap-2">
               <div>
                 <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                  🏆 Követett Csatornák Ranglistája
+                  <TrophyIcon size={20} /> Követett Csatornák Ranglistája
                 </h2>
                 <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Ahol a legtöbb időt töltötted a StreamElements szerint</p>
 
                 {session && !leaderboardLoading && !leaderboardError && leaderboardStats.length > 0 && (
-                  <div className="mt-3 flex items-center gap-2 bg-[#030712] border border-[#9146FF]/30 px-3 py-1.5 rounded-xl w-fit">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Összesen:</span>
-                    <span className="text-xs font-black text-[#9146FF] drop-shadow-[0_0_8px_rgba(145,70,255,0.4)]">
-                      {formatTime(totalLeaderboardWatchtime, leaderboardTimeFormat === 'minutes')}
-                    </span>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 bg-[#030712] border border-[#9146FF]/30 px-3 py-1.5 rounded-xl w-fit">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Összesen:</span>
+                      <span className="text-xs font-black text-[#9146FF] drop-shadow-[0_0_8px_rgba(145,70,255,0.4)]">
+                        {formatTime(totalLeaderboardWatchtime, leaderboardTimeFormat === 'minutes')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-[#030712] border border-[#1f2937] px-3 py-1.5 rounded-xl w-fit">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Statisztika:</span>
+                      <span className="text-xs font-black text-gray-300">
+                        {leaderboardStats.length} <span className="text-gray-500 font-medium">/ {totalFollows > 0 ? totalFollows : '?'} követett</span>
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -533,7 +533,6 @@ function WatchtimeContent() {
 
             {!session && status !== 'loading' && (
               <div className="relative w-full flex-1 flex items-center justify-center min-h-0">
-                {/* Kijelentkezett Skeleton Háttere (12 db kártya, hogy betöltse a teret) */}
                 <div className="absolute inset-0 flex flex-col gap-3 opacity-30 blur-[3px] select-none pointer-events-none overflow-hidden">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
                     <div key={i} className="bg-[#030712] border border-[#1f2937] rounded-2xl p-3 flex items-center justify-between shrink-0">
@@ -555,11 +554,11 @@ function WatchtimeContent() {
 
                 <div className="relative z-10 bg-[#030712]/90 border border-[#3e1f72] p-6 rounded-2xl max-w-sm text-center flex flex-col items-center gap-3 shadow-2xl backdrop-blur-md">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#9146FF]/20 border border-[#9146FF]/50 flex items-center justify-center text-[#9146FF] text-xl sm:text-2xl font-bold">
-                    🏆
+                    <TrophyIcon />
                   </div>
                   <h3 className="text-sm sm:text-base font-bold text-white">Saját Ranglistád</h3>
                   <p className="text-[11px] sm:text-xs text-gray-400 leading-relaxed">
-                    Jelentkezz be Twitch fiókoddal a követett csatornáid automatikus elemzéséhez és személyes watchtime ranglistád megtekintéséhez!
+                    Jelentkezz be Twitch fiókoddal a követett csatornáid automatikus elemzéséhez és a watchtime ranglistád megtekintéséhez!
                   </p>
                   <button
                     onClick={() => signIn('twitch')}
@@ -567,13 +566,15 @@ function WatchtimeContent() {
                   >
                     Twitch Bejelentkezés
                   </button>
+                  <p className="text-[11px] sm:text-xs text-gray-400 leading-relaxed">
+                    <b>(Semmilyen adatot nem tárolunk!)</b>
+                  </p>
                 </div>
               </div>
             )}
 
             {session && (
               <div className="flex-1 min-h-0 flex flex-col">
-                {/* Bejelentkezett állapot töltési skeletonja (12 kártyával a biztos lefedettségért) */}
                 {leaderboardLoading && (
                   <div className="flex flex-col gap-3 animate-pulse overflow-hidden h-full">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (

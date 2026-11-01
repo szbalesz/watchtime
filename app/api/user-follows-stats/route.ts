@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 
-
 export async function GET() {
     try {
         const session = await getServerSession(authOptions);
@@ -108,7 +107,11 @@ export async function GET() {
             .filter((item): item is NonNullable<typeof item> => item !== null)
             .sort((a, b) => b.watchtime - a.watchtime || b.points - a.points);
 
-        return NextResponse.json({ stats: sortedStats });
+        return NextResponse.json({
+            stats: sortedStats,
+            totalFollows: followedChannels.length
+        });
+
     } catch (err) {
         console.error('API Error:', err);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

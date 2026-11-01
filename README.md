@@ -2,7 +2,7 @@
   
   # ⚡ StreamElements Watchtime Panel
   
-  **Egy modern, villámgyors és letisztult felület a Twitch nézési időd és pontjaid követésére.**
+  **Egy modern és letisztult felület a Twitch nézési időd és pontjaid követésére.**
 
   [![Live Demo](https://img.shields.io/badge/Live_Demo-watchtime.szbalesz.com-9146FF?style=for-the-badge&logo=twitch&logoColor=white)](https://watchtime.szbalesz.com)
   [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
