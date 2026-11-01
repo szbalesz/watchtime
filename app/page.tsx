@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { TrophyIcon } from 'lucide-react';
 
 interface UserData {
@@ -25,6 +25,7 @@ interface FollowStat {
 function WatchtimeContent() {
   const { data: session, status } = useSession();
   const params = useParams();
+  const searchParams = useSearchParams();
 
   const [channelInput, setChannelInput] = useState('');
   const [userInput, setUserInput] = useState('');
@@ -35,6 +36,8 @@ function WatchtimeContent() {
 
   const [channelLoading, setChannelLoading] = useState(false);
   const [userLoading, setUserLoading] = useState(false);
+
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const [channelError, setChannelError] = useState('');
   const [userError, setUserError] = useState('');
@@ -139,35 +142,77 @@ function WatchtimeContent() {
   useEffect(() => {
     if (hasInitialLoaded) return;
 
-    const slug = params?.slug as string[] | undefined;
-    if (slug && slug.length > 0) {
-      const ch = slug[0];
-      const u = slug[1] || (session ? getExactUsername() : '');
+    const loadInitialData = async () => {
+      const slug = params?.slug as string[] | undefined;
 
-      setChannelInput(ch);
+      let queryChannel = searchParams.get('channel') || searchParams.get('link_id');
+      let queryUser = searchParams.get('user');
 
-      fetch(`/api/proxy/streamelements/channels/${ch.toLowerCase()}`)
-        .then((res) => res.json())
-        .then((data) => {
+      if (!queryChannel && typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        queryChannel = urlParams.get('channel') || urlParams.get('link_id');
+        if (!queryUser) queryUser = urlParams.get('user');
+      }
+
+      if (!queryChannel && isDiscordActivity && typeof window !== 'undefined') {
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const guildId = urlParams.get('guild_id');
+
+          if (guildId) {
+            const rawEnvMapping = process.env.NEXT_PUBLIC_GUILD_CHANNELS || '';
+            const guildChannelMap: Record<string, string> = {};
+
+            rawEnvMapping.split(',').forEach((item) => {
+              const [gId, chName] = item.split(':');
+              if (gId && chName) {
+                guildChannelMap[gId.trim()] = chName.trim();
+              }
+            });
+
+            if (guildChannelMap[guildId]) {
+              queryChannel = guildChannelMap[guildId];
+            }
+          }
+        } catch (e) {
+          console.error("Hiba a guild leképezés olvasásakor", e);
+        }
+      }
+
+      const targetChannel = (slug && slug[0]) || queryChannel;
+      const targetUser = (slug && slug[1]) || queryUser || (session ? getExactUsername() : '');
+
+      if (targetChannel) {
+        setChannelInput(targetChannel);
+
+        try {
+          const res = await fetch(`/api/proxy/streamelements/channels/${targetChannel.toLowerCase()}`);
+          const data = await res.json();
           if (data._id) {
             const realCh = {
               id: data._id,
-              name: data.displayName || data.username || ch,
+              name: data.displayName || data.username || targetChannel,
               avatar: data.avatar || 'https://cdn.streamelements.com/static/user/profile_header_default.png',
             };
             setChannelData(realCh);
 
-            if (u) {
-              setUserInput(u);
-              executeUserSearch(realCh.id, u, ch, false);
+            if (targetUser) {
+              setUserInput(targetUser);
+              await executeUserSearch(realCh.id, targetUser, targetChannel, false);
             }
           }
-        })
-        .finally(() => setHasInitialLoaded(true));
-    } else {
-      setHasInitialLoaded(true);
-    }
-  }, [params, session, hasInitialLoaded]);
+        } finally {
+          setHasInitialLoaded(true);
+          setIsInitializing(false);
+        }
+      } else {
+        setHasInitialLoaded(true);
+        setIsInitializing(false);
+      }
+    };
+
+    loadInitialData();
+  }, [params, searchParams, session, hasInitialLoaded, isDiscordActivity]);
 
   const handleSearchChannel = async (targetChannel?: string) => {
     const input = (targetChannel || channelInput).trim().toLowerCase();
@@ -275,7 +320,7 @@ function WatchtimeContent() {
   return (
     <div className="w-full min-h-screen lg:h-screen flex flex-col bg-[#030712] lg:overflow-hidden">
 
-      {/* NAVBAR (Csak akkor jelenik meg, ha NEM Discord Activity-ben vagyunk) */}
+      {/* NAVBAR */}
       {!isDiscordActivity && (
         <header className="sticky top-0 z-50 w-full bg-[#030712]/80 backdrop-blur-md border-b border-[#1f2937]/80 shrink-0">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
@@ -288,16 +333,15 @@ function WatchtimeContent() {
               </h1>
             </div>
 
-            {/* JOBB FENTI SÁV: Discord Activity Hozzáadása gomb + Opcionális bejelentkezett profil */}
             <div className="flex items-center gap-2 shrink-0">
               <a
                 href="https://discord.com/oauth2/authorize?client_id=1566440373276905632"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-[10px] sm:text-[11px] py-2.5 px-3 rounded-xl transition duration-200 shadow-md flex items-center gap-1.5 shrink-0"
-                title="Watchtime activity hozzáadása Discord szerverhez (csak watchtime lekérést tartalmaz)"
+                title="Watchtime activity hozzáadása Discord szerverhez"
               >
-                <span className="w-4 h-3"> <svg xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 512 365.467"><path fill="#fff" d="M378.186 365.028s-15.794-18.865-28.956-35.099c57.473-16.232 79.41-51.77 79.41-51.77-17.989 11.846-35.099 20.182-50.454 25.885-21.938 9.213-42.997 14.917-63.617 18.866-42.118 7.898-80.726 5.703-113.631-.438-25.008-4.827-46.506-11.407-64.494-18.867-10.091-3.947-21.059-8.774-32.027-14.917-1.316-.877-2.633-1.316-3.948-2.193-.877-.438-1.316-.878-1.755-.878-7.898-4.388-12.285-7.458-12.285-7.458s21.06 34.659 76.779 51.331c-13.163 16.673-29.395 35.977-29.395 35.977C36.854 362.395 0 299.218 0 299.218 0 159.263 63.177 45.633 63.177 45.633 126.354-1.311 186.022.005 186.022.005l4.388 5.264C111.439 27.645 75.461 62.305 75.461 62.305s9.653-5.265 25.886-12.285c46.945-20.621 84.236-25.885 99.592-27.64 2.633-.439 4.827-.878 7.458-.878 26.763-3.51 57.036-4.387 88.624-.878 41.68 4.826 86.43 17.111 132.058 41.68 0 0-34.66-32.906-109.244-55.281l6.143-7.019s60.105-1.317 122.844 45.628c0 0 63.178 113.631 63.178 253.585 0-.438-36.854 62.739-133.813 65.81l-.001.001zm-43.874-203.133c-25.006 0-44.75 21.498-44.75 48.262 0 26.763 20.182 48.26 44.75 48.26 25.008 0 44.752-21.497 44.752-48.26 0-26.764-20.182-48.262-44.752-48.262zm-160.135 0c-25.008 0-44.751 21.498-44.751 48.262 0 26.763 20.182 48.26 44.751 48.26 25.007 0 44.75-21.497 44.75-48.26.439-26.763-19.742-48.262-44.75-48.262z" /></svg> </span>
+                <span className="w-4 h-3"> <svg xmlns="http://www.w3.org/2000/svg" shapeRendering="geometricPrecision" textRendering="geometricPrecision" imageRendering="optimizeQuality" fillRule="evenodd" clipRule="evenodd" viewBox="0 0 512 365.467"><path fill="#fff" d="M378.186 365.028s-15.794-18.865-28.956-35.099c57.473-16.232 79.41-51.77 79.41-51.77-17.989 11.846-35.099 20.182-50.454 25.885-21.938 9.213-42.997 14.917-63.617 18.866-42.118 7.898-80.726 5.703-113.631-.438-25.008-4.827-46.506-11.407-64.494-18.867-10.091-3.947-21.059-8.774-32.027-14.917-1.316-.877-2.633-1.316-3.948-2.193-.877-.438-1.316-.878-1.755-.878-7.898-4.388-12.285-7.458-12.285-7.458s21.06 34.659 76.779 51.331c-13.163 16.673-29.395 35.977-29.395 35.977C36.854 362.395 0 299.218 0 299.218 0 159.263 63.177 45.633 63.177 45.633 126.354-1.311 186.022.005 186.022.005l4.388 5.264C111.439 27.645 75.461 62.305 75.461 62.305s9.653-5.265 25.886-12.285c46.945-20.621 84.236-25.885 99.592-27.64 2.633-.439 4.827-.878 7.458-.878 26.763-3.51 57.036-4.387 88.624-.878 41.68 4.826 86.43 17.111 132.058 41.68 0 0-34.66-32.906-109.244-55.281l6.143-7.019s60.105-1.317 122.844 45.628c0 0 63.178 113.631 63.178 253.585 0-.438-36.854 62.739-133.813 65.81l-.001.001zm-43.874-203.133c-25.006 0-44.75 21.498-44.75 48.262 0 26.763 20.182 48.26 44.75 48.26 25.008 0 44.752-21.497 44.752-48.26 0-26.764-20.182-48.262-44.752-48.262zm-160.135 0c-25.008 0-44.751 21.498-44.751 48.262 0 26.763 20.182 48.26 44.751 48.26 25.007 0 44.75-21.497 44.75-48.26.439-26.763-19.742-48.262-44.75-48.262z" /></svg> </span>
                 <span className='pr-1'>Activity hozzáadása</span>
               </a>
 
@@ -333,98 +377,108 @@ function WatchtimeContent() {
         </header>
       )}
 
-      {/* FŐ TARTALOM: Discordon belül teljesen középre igazítva (vízszintesen és függőlegesen is) */}
-      <main className={`flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 flex flex-col lg:min-h-0 lg:overflow-y-auto lg:overflow-hidden ${isDiscordActivity ? 'items-center justify-center' : ''}`}>
+      {/* FŐ TARTALOM */}
+      <main className={`flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 lg:px-8 flex flex-col lg:min-h-0 lg:overflow-y-auto lg:overflow-hidden ${isDiscordActivity ? 'items-center justify-center' : ''}`}>
         <div className={`grid grid-cols-1 ${isDiscordActivity ? 'lg:grid-cols-12 max-w-lg mx-auto w-full' : 'lg:grid-cols-12'} gap-4 sm:gap-6 items-start lg:h-full lg:min-h-0`}>
 
           <div className={`${isDiscordActivity ? 'lg:col-span-12' : 'lg:col-span-6'} w-full h-fit bg-[#111827] border border-[#1f2937] rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col gap-5 transition-all duration-300`}>
             <div className="flex flex-col gap-5">
 
-              {!channelData && (
-                <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {isInitializing ? (
+                <div className="flex flex-col gap-3 animate-pulse opacity-70">
                   <label className="text-xs font-semibold text-gray-400">Twitch Csatorna Neve</label>
-                  <input
-                    type="text"
-                    value={channelInput}
-                    onChange={(e) => setChannelInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearchChannel()}
-                    placeholder="pl. csatornanév"
-                    className="w-full bg-[#030712] border border-[#1f2937] text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#9146FF] transition"
-                  />
-                  <button
-                    onClick={() => handleSearchChannel()}
-                    disabled={channelLoading}
-                    className="w-full bg-[#9146FF] hover:bg-[#a970ff] text-white font-semibold py-3 rounded-xl transition duration-200 active:scale-95 text-sm"
-                  >
-                    {channelLoading ? 'Keresés...' : 'Csatorna Keresése'}
-                  </button>
-                  {channelError && <p className="text-red-400 text-xs text-center">{channelError}</p>}
+                  <div className="w-full bg-[#030712] border border-[#1f2937] rounded-xl h-12"></div>
+                  <div className="w-full bg-[#9146FF]/50 rounded-xl h-11"></div>
                 </div>
-              )}
-
-              {channelData && (
-                <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="bg-[#030712] border border-[#3e1f72] rounded-2xl p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img src={`/api/proxy/image?url=${encodeURIComponent(channelData.avatar)}`} alt="Avatar" className="w-10 h-10 rounded-full border border-[#9146FF] object-cover" />
-                      <div>
-                        <h2 className="text-sm font-bold text-white">{channelData.name}</h2>
-                        <p className="text-[11px] text-gray-400">Kiválasztott csatorna</p>
-                      </div>
-                    </div>
-                    <button onClick={handleReset} className="text-gray-400 hover:text-white p-2 text-sm transition">✕</button>
-                  </div>
-
-                  {/* Streamelements és Lurkology gombok: CSAK sima weboldalon jelennek meg */}
-                  {!isDiscordActivity && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <a
-                        href={`https://streamelements.com/${channelInput || channelData.name}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex flex-col items-center justify-center bg-[#030712] border border-[#1f2937] hover:border-[#9146FF] rounded-xl p-2.5 text-gray-400 hover:text-white transition duration-200 group"
+              ) : (
+                <>
+                  {!channelData && (
+                    <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <label className="text-xs font-semibold text-gray-400">Twitch Csatorna Neve</label>
+                      <input
+                        type="text"
+                        value={channelInput}
+                        onChange={(e) => setChannelInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearchChannel()}
+                        placeholder="pl. csatornanév"
+                        className="w-full bg-[#030712] border border-[#1f2937] text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#9146FF] transition"
+                      />
+                      <button
+                        onClick={() => handleSearchChannel()}
+                        disabled={channelLoading}
+                        className="w-full bg-[#9146FF] hover:bg-[#a970ff] text-white font-semibold py-3 rounded-xl transition duration-200 active:scale-95 text-sm"
                       >
-                        <svg className="w-4 h-4 mb-1 text-gray-500 group-hover:text-[#9146FF] transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        <span className="text-[10px] font-bold tracking-wider uppercase">StreamElements</span>
-                      </a>
-
-                      <a
-                        href={`https://lurkology.com/${channelInput || channelData.name}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex flex-col items-center justify-center bg-[#030712] border border-[#1f2937] hover:border-[#9146FF] rounded-xl p-2.5 text-gray-400 hover:text-white transition duration-200 group"
-                      >
-                        <svg className="w-4 h-4 mb-1 text-gray-500 group-hover:text-[#9146FF] transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <span className="text-[10px] font-bold tracking-wider uppercase">Lurkology</span>
-                      </a>
+                        {channelLoading ? 'Keresés...' : 'Csatorna Keresése'}
+                      </button>
+                      {channelError && <p className="text-red-400 text-xs text-center">{channelError}</p>}
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold text-gray-400">Néző Felhasználóneve</label>
-                    <input
-                      ref={userInputRef}
-                      type="text"
-                      value={userInput}
-                      onChange={(e) => setUserInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearchUser()}
-                      placeholder="pl. felhasználónév"
-                      className="w-full bg-[#030712] border border-[#1f2937] text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#9146FF] transition"
-                    />
-                    <button
-                      onClick={handleSearchUser}
-                      disabled={userLoading}
-                      className="w-full bg-[#1f2937] hover:bg-[#374151] text-white font-semibold py-3 rounded-xl transition duration-200 active:scale-95 text-sm"
-                    >
-                      {userLoading ? 'Lekérdezés...' : 'Adatok Lekérdezése'}
-                    </button>
-                    {userError && <p className="text-red-400 text-xs text-center">{userError}</p>}
-                  </div>
-                </div>
+                  {channelData && (
+                    <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <label className="text-xs font-semibold text-gray-400">Twitch Csatorna Neve</label>
+                      <div className="bg-[#030712] border border-[#3e1f72] rounded-2xl p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <img src={`/api/proxy/image?url=${encodeURIComponent(channelData.avatar)}`} alt="Avatar" className="w-10 h-10 rounded-full border border-[#9146FF] object-cover" />
+                          <div>
+                            <h2 className="text-sm font-bold text-white">{channelData.name}</h2>
+                            <p className="text-[11px] text-gray-400">Kiválasztott csatorna</p>
+                          </div>
+                        </div>
+                        <button onClick={handleReset} className="text-gray-400 hover:text-white p-2 text-sm transition">✕</button>
+                      </div>
+
+                      {!isDiscordActivity && (
+                        <div className="grid grid-cols-2 gap-3 mt-1">
+                          <a
+                            href={`https://streamelements.com/${channelInput || channelData.name}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center justify-center bg-[#030712] border border-[#1f2937] hover:border-[#9146FF] rounded-xl p-2.5 text-gray-400 hover:text-white transition duration-200 group"
+                          >
+                            <svg className="w-4 h-4 mb-1 text-gray-500 group-hover:text-[#9146FF] transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            <span className="text-[10px] font-bold tracking-wider uppercase">StreamElements</span>
+                          </a>
+
+                          <a
+                            href={`https://lurkology.com/${channelInput || channelData.name}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center justify-center bg-[#030712] border border-[#1f2937] hover:border-[#9146FF] rounded-xl p-2.5 text-gray-400 hover:text-white transition duration-200 group"
+                          >
+                            <svg className="w-4 h-4 mb-1 text-gray-500 group-hover:text-[#9146FF] transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <span className="text-[10px] font-bold tracking-wider uppercase">Lurkology</span>
+                          </a>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-2 mt-2">
+                        <label className="text-xs font-semibold text-gray-400">Néző Felhasználóneve</label>
+                        <input
+                          ref={userInputRef}
+                          type="text"
+                          value={userInput}
+                          onChange={(e) => setUserInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSearchUser()}
+                          placeholder="pl. felhasználónév"
+                          className="w-full bg-[#030712] border border-[#1f2937] text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#9146FF] transition"
+                        />
+                        <button
+                          onClick={handleSearchUser}
+                          disabled={userLoading}
+                          className="w-full bg-[#1f2937] hover:bg-[#374151] text-white font-semibold py-3 rounded-xl transition duration-200 active:scale-95 text-sm"
+                        >
+                          {userLoading ? 'Lekérdezés...' : 'Adatok Lekérdezése'}
+                        </button>
+                        {userError && <p className="text-red-400 text-xs text-center">{userError}</p>}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {userLoading && (
@@ -456,7 +510,6 @@ function WatchtimeContent() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    {/* Rang / Helyezés: Discordon sima kártya (nem link), weboldalon kattintható link */}
                     {isDiscordActivity ? (
                       <div className="bg-[#030712] border border-[#1f2937] p-3.5 rounded-2xl text-center">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Rang / Helyezés</p>
@@ -517,7 +570,7 @@ function WatchtimeContent() {
             </div>
           </div>
 
-          {/* JOBB OSZLOP: RANGLISTA (Ez CSAK a sima weboldalon jelenik meg, Discordon nem!) */}
+          {/* JOBB OSZLOP: RANGLISTA */}
           {!isDiscordActivity && (
             <div className="lg:col-span-6 w-full h-[40rem] lg:h-full bg-[#111827] border border-[#1f2937] rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col gap-4 relative overflow-hidden min-h-0">
 
